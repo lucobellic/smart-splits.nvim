@@ -9,6 +9,26 @@ local AtEdgeBehavior = types.AtEdgeBehavior
 
 local M = {}
 
+local function get_edgy_window()
+  local ok, EdgyWindow = pcall(require, 'edgy.window')
+  return ok and EdgyWindow.cache[vim.api.nvim_get_current_win()] or nil
+end
+
+---@param dim "width" | "height"
+---@param amount number
+local function win_resize(dim, amount)
+  local edgy_win = get_edgy_window()
+  if edgy_win then
+    -- vim.print('resizing edgy window')
+    edgy_win:resize(dim, amount)
+  else
+    -- vim.print('resizing standard window')
+    local dir = dim == 'height' and '' or 'vertical '
+    local sign = amount >= 0 and '+' or ''
+    vim.cmd(dir .. 'resize ' .. sign .. amount)
+  end
+end
+
 ---@enum WinPosition
 local WinPosition = {
   start = 0,
@@ -232,7 +252,11 @@ local function resize(direction, amount)
     -- vertically
     local plus_minus = compute_direction_vertical(direction)
     local cur_win_pos = vim.api.nvim_win_get_position(0)
-    vim.cmd(string.format('resize %s%s', plus_minus, amount))
+
+    local new_amount = tonumber(plus_minus .. amount)
+    if new_amount then
+      win_resize('height', new_amount)
+    end
     if M.win_position(direction) ~= WinPosition.middle then
       return
     end
@@ -247,28 +271,35 @@ local function resize(direction, amount)
 
     if at_bottom_edge() then
       if plus_minus == WincmdResizeDirection.bigger then
-        vim.cmd(string.format('resize -%s', amount))
+        win_resize('height', -amount)
         next_window(DirectionKeys.down)
-        vim.cmd(string.format('resize -%s', amount))
+        win_resize('height', -amount)
       else
-        vim.cmd(string.format('resize +%s', amount))
+        win_resize('height', amount)
         next_window(DirectionKeys.down)
-        vim.cmd(string.format('resize +%s', amount))
+        win_resize('height', amount)
       end
       return
     end
 
     if adjustment_plus_minus ~= nil then
-      vim.cmd(string.format('resize %s%s', adjustment_plus_minus, amount))
-      next_window(DirectionKeys.up)
-      vim.cmd(string.format('resize %s%s', adjustment_plus_minus, amount))
-      next_window(DirectionKeys.down)
+      ---@cast adjustment_plus_minus string
+      local new_amount = tonumber(adjustment_plus_minus .. amount)
+      if new_amount then
+        win_resize('height', new_amount)
+        next_window(DirectionKeys.up)
+        win_resize('height', new_amount)
+        next_window(DirectionKeys.down)
+      end
     end
   else
     -- horizontally
     local plus_minus = compute_direction_horizontal(direction)
     local cur_win_pos = vim.api.nvim_win_get_position(0)
-    vim.cmd(string.format('vertical resize %s%s', plus_minus, amount))
+    local new_amount = tonumber(plus_minus .. amount)
+    if new_amount then
+      win_resize('width', new_amount)
+    end
     if M.win_position(direction) ~= WinPosition.middle then
       return
     end
@@ -281,10 +312,13 @@ local function resize(direction, amount)
       adjustment_plus_minus = WincmdResizeDirection.smaller
     end
     if adjustment_plus_minus ~= nil then
-      vim.cmd(string.format('vertical resize %s%s', adjustment_plus_minus, amount))
-      next_window(DirectionKeys.right)
-      vim.cmd(string.format('vertical resize %s%s', adjustment_plus_minus, amount))
-      next_window(DirectionKeys.left)
+      local new_amount = tonumber(adjustment_plus_minus .. amount)
+      if new_amount then
+        win_resize('width', new_amount)
+        next_window(DirectionKeys.right)
+        win_resize('width', new_amount)
+        next_window(DirectionKeys.left)
+      end
     end
   end
 end
