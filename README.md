@@ -377,6 +377,12 @@ smart_splits.apply_to_config(config, {
 
   -- directional keys to use in order of: left, down, up, right
   direction_keys = { 'h', 'j', 'k', 'l' },
+  -- if you want to use separate direction keys for move vs. resize, you
+  -- can also do this:
+  direction_keys = {
+    move = { 'h', 'j', 'k', 'l' },
+    resize = { 'LeftArrow', 'DownArrow', 'UpArrow', 'RightArrow' },
+  },
   -- modifier keys to combine with direction_keys
   modifiers = {
     move = 'CTRL', -- modifier to use for pane movement, e.g. CTRL+h to move left
@@ -457,6 +463,12 @@ return {
 #### Kitty
 
 > [!NOTE]
+> It is recommended _not to lazy load_ `smart-splits.nvim` if using the Kitty integration,
+> since it depends on the plugin setting the `IS_NVIM` Kitty user variable on startup.
+> The plugin is small, and smart about not loading modules unnecessarily, so it should
+> have minimal impact on your startup time. It adds about 0.07ms on my setup.
+
+> [!NOTE]
 > The `config.at_edge = 'wrap'` option is not supoprted in Kitty terminal multiplexer due to inability to determine
 > pane layout from CLI.
 
@@ -466,7 +478,6 @@ By default the plugin sets a kitty user-var `IS_NVIM` when it loads. You can tak
 Add the following snippet to `~/.config/kitty/kitty.conf`, adjusting the keymaps and resize amount as desired.
 
 ```
-
 map ctrl+j neighboring_window down
 map ctrl+k neighboring_window up
 map ctrl+h neighboring_window left
